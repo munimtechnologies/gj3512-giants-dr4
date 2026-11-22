@@ -20,27 +20,53 @@ will be made and graded:
   inclinations, checks whether the two-planet systems are coplanar as assumed, and decides between
   two disagreeing GJ 463 b solutions: about 22 deg and 4.4 M_Jup (Morales et al. 2025) versus
   about 27-28 deg and 3.3-3.6 M_Jup (Sozzetti 2023; Piccinini et al. 2026).
-- **Calibration before DR4:** [VALIDATION-epochalypse.md](VALIDATION-epochalypse.md). The frozen
-  fitter is run on the Epochalypse simulated DR4 epoch astrometry (Yahalomi et al. 2026,
-  arXiv:2611.06915), which contains injected companions of known orbits and zero-companion nulls.
-  Three gates are fixed in advance: false-alarm rate, inclination-interval coverage and
-  consistency.
+- **Calibration v1, graded 2026-11-22: EPOCHALYPSE_PASS.**
+  [VALIDATION-epochalypse.md](VALIDATION-epochalypse.md) set the rules and
+  [GRADING-epochalypse-v1.md](GRADING-epochalypse-v1.md) reports the result. The frozen fitter was run
+  on 300 systems of the Epochalypse simulated DR4 epoch astrometry (Yahalomi et al. 2026,
+  arXiv:2611.06915).
+  - False alarms: 0 of 300.
+  - Inclination intervals: 90.5% cover the truth.
+  - Inconsistent with the RVs: 2.2%.
+  - A diagnostic done afterwards found the weak spot: nearly face-on orbits. Below 25 deg only 14 of 21
+    intervals covered the truth, with inclinations biased toward edge-on by a median 11 deg.
+- **Amendment 2** (2026-11-22, before DR4): [PREREGISTRATION-amendment2.md](PREREGISTRATION-amendment2.md).
+  It adds an inclination estimator that also uses the RV amplitude a0 sin i (`gaiaorb/rvincl.py`),
+  calibrates it on the same systems under pre-stated gates (`epocha2_job.py`), and fixes the rule that
+  decides which estimator is primary on DR4 day (`ce_dr4.py`).
+- **I/O fix** (2026-11-22, before DR4): [notes/io-fix-2026-11-22.md](notes/io-fix-2026-11-22.md).
+  The Gaia Archive renamed its DataLink data structures on 2026-10-14 (INDIVIDUAL became
+  DATAMODEL_STANDARD). `io_gaia.py` 0.2.0 asks for the new name first and rejects error responses.
+  No analysis changes.
+- **DR4 day:** [dr4day/DR4DAY.md](dr4day/DR4DAY.md). `dr4day.py` runs all four of MV2's DR4 near-miss
+  tests in one job, in a fixed order: validation, Proxima c, the radio planets, the eclipse-timing
+  planets, then this repository's three steps.
 
 Code:
 - `gaiaorb/rvdr4.py`: an exact joint linear fit of the RV orbits to Gaia's along-scan epochs.
-- Runs: `rv_job.py` (GJ 3512), `rv_job_a1.py` (Amendment 1), `epocha_job.py` (calibration).
-- Tests on synthetic epochs: `test_rvdr4.py`, `test_rvdr4_a1.py`, `test_epocha.py`.
+- `gaiaorb/rvincl.py`: the RV-amplitude-constrained inclination posterior (Amendment 2).
+- Runs:
+  - `rv_job.py` (GJ 3512) and `rv_job_a1.py` (Amendment 1);
+  - `ce_dr4.py` (Amendment 2);
+  - `epocha_job.py` and `epocha2_job.py` (calibrations);
+  - `dr4day.py` (all four DR4 tests in one job).
+- Tests on synthetic epochs: `test_rvdr4.py`, `test_rvdr4_a1.py`, `test_epocha.py`, `test_rvincl.py`,
+  `test_epocha2.py`, `test_ce_dr4.py`, `test_io_gaia.py`, `test_dr4day.py`.
 
 The shared Gaia DR4 code (`gaiaorb/`, `io_gaia.py`, `etv_job.py`) is the same as in
 [proxima-c-dr4](https://github.com/munimtechnologies/proxima-c-dr4),
 [radio-planets-dr4](https://github.com/munimtechnologies/radio-planets-dr4) and
 [pceb-planets-dr4](https://github.com/munimtechnologies/pceb-planets-dr4).
 
-To run after release: first `python -m unittest -v test_rvdr4 test_rvdr4_a1 test_gaiaorb`, then
-`python rv_job.py --data-dir /data --out-dir /out [--validated]` and
-`python rv_job_a1.py --data-dir /data --out-dir /out [--validated]`.
+To run after release (one job): `python dr4day.py --data-dir /data --out-dir /out --ce-outcome <outcome>`.
+The same steps can also be run one at a time:
+1. `python -m unittest -v test_rvdr4 test_rvdr4_a1 test_rvincl test_ce_dr4 test_gaiaorb test_io_gaia`
+2. `python rv_job.py --data-dir /data --out-dir /out [--validated]`
+3. `python rv_job_a1.py --data-dir /data --out-dir /out [--validated]`
+4. `python ce_dr4.py --points-dir /out --out-dir /out --ce-outcome <outcome of epocha2_job.py> [--validated]`
 
-Status (2026-11-22): pre-registered; the calibration is queued; the measurements wait for Gaia DR4.
+Status (2026-11-22): pre-registered. Calibration v1 passed. The Amendment 2 calibration and a live
+DataLink probe are queued. The measurements wait for Gaia DR4.
 
 ## Credits
 
@@ -53,6 +79,9 @@ Status (2026-11-22): pre-registered; the calibration is queued; the measurements
   dynamical masses.
 - Yahalomi et al. 2026 (arXiv:2611.06915; Zenodo 10.5281/zenodo.23789041, CC BY 4.0): the
   Epochalypse catalogue.
+- Baycroft, Faria & Delisle 2026 (kima, arXiv:2606.24132), Hobbs 2026 (ExoPlanetLab,
+  arXiv:2611.13770) and Brandt et al. 2021 (orvara): joint epoch-astrometry and RV posteriors, on
+  which Amendment 2's estimator is modelled.
 - ESA's Gaia mission and DPAC: the astrometry.
 
 ## Disclosure and licence
